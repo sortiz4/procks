@@ -72,7 +72,27 @@ impl Procks {
 
     /// Runs this program and writes all errors.
     pub async fn run(&mut self) -> Result<()> {
-        match self.run_inner().await {
+        let run = async {
+            // Write the help or version message
+            if self.options.help {
+                return self.help();
+            }
+            if self.options.version {
+                return self.version();
+            }
+
+            // Validate the options
+            self.validate()?;
+
+            // Launch a proxy server
+            return match self.options.protocol.as_ref().unwrap().to_lowercase().as_str() {
+                Self::PROTO_TCP => self.tcp().await,
+                Self::PROTO_UDP => self.udp().await,
+                _ => Ok(()),
+            };
+        };
+
+        match run.await {
             Ok(val) => {
                 return Ok(val);
             },
@@ -81,40 +101,6 @@ impl Procks {
                 return Err(err);
             },
         }
-    }
-
-    /// Runs this program.
-    async fn run_inner(&mut self) -> Result<()> {
-        // Write the help or version message
-        if self.options.help {
-            return self.help();
-        }
-        if self.options.version {
-            return self.version();
-        }
-
-        // Validate the options
-        self.validate()?;
-
-        // Launch a proxy server
-        return match self.options.protocol.as_ref().unwrap().to_lowercase().as_str() {
-            Self::PROTO_TCP => self.tcp().await,
-            Self::PROTO_UDP => self.udp().await,
-            _ => Ok(()),
-        };
-    }
-
-    /// Validates the options.
-    fn validate(&self) -> Result<()> {
-        return if {
-            self.options.protocol.is_none() ||
-            self.options.receive.is_none() ||
-            self.options.send.is_none()
-        } {
-            Err(Error::Missing)
-        } else {
-            Ok(())
-        };
     }
 
     /// Writes the help message to the standard error stream.
@@ -131,6 +117,19 @@ impl Procks {
         return Ok(());
     }
 
+    /// Validates the options.
+    fn validate(&self) -> Result<()> {
+        return if {
+            self.options.protocol.is_none() ||
+            self.options.receive.is_none() ||
+            self.options.send.is_none()
+        } {
+            Err(Error::Missing)
+        } else {
+            Ok(())
+        };
+    }
+
     /// Launches a TCP proxy server.
     async fn tcp(&mut self) -> Result<()> {
         let send_addr = self.options.send.as_ref().unwrap();
@@ -144,17 +143,19 @@ impl Procks {
             let recv_stream = listener.accept().await?.0;
             let send_stream = TcpStream::connect(send_addr).await?;
 
-            task::spawn(async move {
-                // Set up the readers and writers
-                let (send_reader, send_writer) = &mut (&send_stream, &send_stream);
-                let (recv_reader, recv_writer) = &mut (&recv_stream, &recv_stream);
+            task::spawn(
+                async move {
+                    // Set up the readers and writers
+                    let (send_reader, send_writer) = &mut (&send_stream, &send_stream);
+                    let (recv_reader, recv_writer) = &mut (&recv_stream, &recv_stream);
 
-                // Forward the traffic
-                let _ = try_join!(
-                    aio::copy(recv_reader, send_writer),
-                    aio::copy(send_reader, recv_writer),
-                );
-            });
+                    // Forward the traffic
+                    let _ = try_join!(
+                        aio::copy(recv_reader, send_writer),
+                        aio::copy(send_reader, recv_writer),
+                    );
+                }
+            );
         }
     }
 
