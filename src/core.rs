@@ -1,3 +1,5 @@
+use clap::CommandFactory;
+use clap::Parser;
 use astd::io as aio;
 use astd::net::TcpListener;
 use astd::net::TcpStream;
@@ -8,35 +10,34 @@ use std::ffi::OsString;
 use std::io;
 use std::io::Stderr;
 use std::io::Write;
-use structopt::StructOpt;
 use super::Error;
 use super::Result;
 
-#[derive(Debug, StructOpt)]
-#[structopt(about = "A simple proxy server.")]
+#[derive(Debug, Parser)]
+#[command(version, disable_help_flag = true, disable_version_flag = true, about = "A simple proxy server.")]
 struct Options {
     /// The size of the internal buffer (in bytes).
-    #[structopt(short = "b", long = "buffer", default_value = "4096")]
+    #[arg(short = 'b', long = "buffer", default_value = "4096")]
     buffer: usize,
 
     /// The protocol to use (TCP or UDP).
-    #[structopt(short = "p", long = "protocol")]
+    #[arg(short = 'p', long = "protocol")]
     protocol: Option<String>,
 
     /// Where traffic will be received.
-    #[structopt(short = "r", long = "receive")]
+    #[arg(short = 'r', long = "receive")]
     receive: Option<String>,
 
     /// Where traffic will be sent.
-    #[structopt(short = "s", long = "send")]
+    #[arg(short = 's', long = "send")]
     send: Option<String>,
 
     /// Show this message.
-    #[structopt(short = "h", long = "help")]
+    #[arg(short = 'h', long = "help")]
     help: bool,
 
     /// Show the version.
-    #[structopt(short = "v", long = "version")]
+    #[arg(short = 'v', long = "version")]
     version: bool,
 }
 
@@ -58,7 +59,7 @@ impl Procks {
     {
         return Ok(
             Self {
-                options: Options::from_iter_safe(iter)?,
+                options: Options::try_parse_from(iter)?,
                 stderr: io::stderr(),
             }
         );
@@ -77,6 +78,7 @@ impl Procks {
             if self.options.help {
                 return self.help();
             }
+
             if self.options.version {
                 return self.version();
             }
@@ -105,15 +107,13 @@ impl Procks {
 
     /// Writes the help message to the standard error stream.
     fn help(&mut self) -> Result<()> {
-        Options::clap().write_help(&mut self.stderr)?;
-        writeln!(self.stderr, "")?;
+        write!(self.stderr, "{}", Options::command().render_help())?;
         return Ok(());
     }
 
     /// Writes the version message to the standard error stream.
     fn version(&mut self) -> Result<()> {
-        Options::clap().write_version(&mut self.stderr)?;
-        writeln!(self.stderr, "")?;
+        write!(self.stderr, "{}", Options::command().render_version())?;
         return Ok(());
     }
 

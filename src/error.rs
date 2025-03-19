@@ -1,3 +1,4 @@
+use clap::Error as ClapError;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -5,7 +6,6 @@ use std::fmt::Formatter;
 use std::fmt::Result as FmtResult;
 use std::io::Error as IoError;
 use std::io::IntoInnerError;
-use structopt::clap::Error as ClapError;
 
 #[derive(Debug)]
 pub enum Error {
