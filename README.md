@@ -1,6 +1,7 @@
 # Procks
-`procks` is a simple proxy server that supports both TCP and UDP. It's written
-in asynchronous Rust and supports a high degree of concurrency.
+`procks` is a simple command line proxy server for handling UDP and TCP
+connections. Leveraging the power of asynchronous Rust, `procks` is both
+lightweight and performant.
 
 ## Usage
 Launching a proxy server requires a protocol, a receiving address, and a
