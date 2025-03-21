@@ -119,11 +119,7 @@ impl Procks {
 
     /// Validates the options.
     fn validate(&self) -> Result<()> {
-        return if {
-            self.options.protocol.is_none() ||
-            self.options.receive.is_none() ||
-            self.options.send.is_none()
-        } {
+        return if self.options.protocol.is_none() || self.options.receive.is_none() || self.options.send.is_none() {
             Err(Error::Missing)
         } else {
             Ok(())
